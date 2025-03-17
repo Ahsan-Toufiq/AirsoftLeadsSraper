@@ -5,8 +5,10 @@ import os
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 # Search terms for Airsoft Stores and Sites
-SEARCH_TERMS = ["Airsoft store UK", "Airsoft shop UK", "Airsoft retailer UK",
-                "Airsoft site UK", "Airsoft skirmish UK", "CQB Airsoft UK", "Outdoor Airsoft site UK"]
+# SEARCH_TERMS = ["Airsoft store UK", "Airsoft shop UK", "Airsoft retailer UK",
+#                 "Airsoft site UK", "Airsoft skirmish UK", "CQB Airsoft UK", "Outdoor Airsoft site UK"]
+
+SEARCH_TERMS = ["Airsoft skirmish UK"]
 
 # Output file
 OUTPUT_FILE = "airsoft_stores_sites.csv"
@@ -60,6 +62,58 @@ def extract_business_details(page, index):
         page.screenshot(path=f"screenshots/error_listing_{index+1}.png")
         return None
 
+def extract_listing_info(page):
+    try:
+        # Wait for detail panel to render
+        page.wait_for_timeout(1500)
+
+        # === NAME ===
+        name = ""
+        name_el = page.locator("h1.DUwDvf.lfPIob")
+        if name_el.count():
+            name = name_el.first.text_content().strip()
+
+        # === OPENING HOURS (aria-label) ===
+        opening_hours = ""
+        hours_container = page.locator("div.t39EBf.GUrTXd[aria-label]")
+        if hours_container.count():
+            opening_hours = hours_container.first.get_attribute("aria-label").strip()
+
+        # === WEBSITE ===
+        website = ""
+        website_block = page.locator("div.AeaXub").filter(
+            has=page.locator("span.google-symbols.PHazN:has-text('')")
+        )
+        if website_block.count():
+            website_text = website_block.locator("div.Io6YTe").first
+            if website_text.count():
+                website = website_text.text_content().strip()
+
+        # === PHONE ===
+        phone = ""
+        phone_block = page.locator("div.AeaXub").filter(
+            has=page.locator("span.google-symbols.NhBTye.PHazN:has-text('')")
+        )
+        if phone_block.count():
+            phone_text = phone_block.locator("div.Io6YTe").first
+            if phone_text.count():
+                phone = phone_text.text_content().strip()
+
+        print(name, phone, website, opening_hours)
+        # === RETURN STRUCTURED DATA ===
+        return {
+            "Name": name,
+            "Phone": phone,
+            "Website": website,
+            "Opening Hours": opening_hours
+        }
+    
+
+    except Exception as e:
+        print(f"[ERROR] Failed to extract listing info: {e}")
+        return None
+
+
 # Scroll until all listings are loaded
 def scroll_until_all_loaded(page, max_scrolls=80):
     scrollable_div = page.locator("div[role='feed']")
@@ -103,13 +157,18 @@ def scrape_google_maps():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False, slow_mo=50)
         page = browser.new_page()
+        CSV_HEADERS = ["Name", "Phone", "Website", "Opening Hours"]
+
+        with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=CSV_HEADERS)
+                writer.writeheader()
 
         all_results = []
 
         for search_term in SEARCH_TERMS:
             print(f"\n\n===== Searching for: {search_term} =====")
             search_url = f"https://www.google.com/maps/search/{search_term.replace(' ', '+')}"
-            page.goto(search_url)
+            page.goto(search_url, wait_until="domcontentloaded", timeout=60000)
             time.sleep(6)
 
             try:
@@ -127,24 +186,30 @@ def scrape_google_maps():
 
             total_count = scroll_until_all_loaded(page)
             business_cards = page.locator("div[class*='Nv2PK']")
+            
+
+            
 
             for index in range(total_count):
                 try:
                     print(f"\nClicking listing {index+1}/{total_count}")
                     business_cards.nth(index).click()
                     page.wait_for_timeout(2000)
-                    business_details = extract_business_details(page, index)
+                    business_details = extract_listing_info(page)
                     if business_details:
+                        with open(OUTPUT_FILE, "a", newline="", encoding="utf-8") as f:
+                            writer = csv.DictWriter(f, fieldnames=CSV_HEADERS)
+                            writer.writerow(business_details)
                         all_results.append(business_details)
                 except Exception as e:
                     print(f"Error processing listing {index+1}: {e}")
 
         browser.close()
 
-        with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=["Name", "Phone", "Website", "Address", "Opening Hours"])
-            writer.writeheader()
-            writer.writerows(all_results)
+        # with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
+        #     writer = csv.DictWriter(f, fieldnames=["Name", "Phone", "Website", "Address", "Opening Hours"])
+        #     writer.writeheader()
+        #     writer.writerows(all_results)
 
         print(f"\nScraping complete. {len(all_results)} entries saved to {OUTPUT_FILE}")
 
