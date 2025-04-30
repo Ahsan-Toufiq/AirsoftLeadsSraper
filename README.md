@@ -6,9 +6,9 @@
 
 ## Demo
 
-[![Watch the demo](https://img.youtube.com/vi/YOUR_VIDEO_ID_HERE/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID_HERE)
+![Scraper Demo](assets/demo.gif)
 
-> 📽️ _Click the image above to watch a short demo of the scraper in action._
+> 📽️ _A short demo showing the scraper in action._
 
 ## Features
 
