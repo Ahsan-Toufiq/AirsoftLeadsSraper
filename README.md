@@ -43,7 +43,7 @@ The scraper behavior can be configured to fit your needs:
 - Configuration is currently hardcoded or stored in a config file (e.g., config.yaml) depending on implementation. Make sure to check the main script or config loader if present.
 
 ## Legal and Ethical Use
-⚠️ Disclaimer
+> ⚠️ Disclaimer
 
 This project is provided for educational and informational purposes only. While scraping public data is generally legal in the UK, you must ensure that your activities comply with:
 - The Terms of Service of any websites you scrape
