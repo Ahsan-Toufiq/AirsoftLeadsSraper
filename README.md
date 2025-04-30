@@ -59,4 +59,4 @@ Always scrape responsibly.
 
 
 ## License
-MIT License – see the LICENSE file for details.
+MIT License – see the [License](./LICENSE) file for details.
